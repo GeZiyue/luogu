@@ -1,6 +1,5 @@
 #include <bits/stdc++.h>
 
-#define isNum(a) (a >= '0' && a <= '9')
 #define SP putchar(' ')
 #define EL putchar('\n')
 #define File(a) freopen(a ".in", "r", stdin), freopen(a ".out", "w", stdout)
@@ -18,21 +17,23 @@ const int iinf = 2147483647;
 const ll llinf = 9223372036854775807ll;
 
 const int N = 2100000;
-const int Mod = 998244353, g = 3;
+const int Mod = 998244353;
 typedef std::vector<int> Poly;
 
-int pow(int a, int b, int m);
+int pow(int a, int b, int ans = 1);
 
 namespace Pol {
 int add(int a, int b) { return (a += b) >= Mod ? a -= Mod : a; }
 int sub(int a, int b) { return (a -= b) < 0 ? a += Mod : a; }
 void inc(int &a, int b) { (a += b) >= Mod ? a -= Mod : a; }
 void dec(int &a, int b) { (a -= b) < 0 ? a += Mod : a; }
+int &reduce(int &x) { return x += x >> 31 & Mod; }
 void init_Poly(int n = N);
-void DIT(Poly &A, int lim, int len);
-void DIF(Poly &A, int lim);
-Poly mult(Poly A, int n, Poly B, int m);
-int gw[N], igw[N];
+void DIT(int *A, int lim);
+void DIF(int *A, int lim);
+Poly mult(const Poly &A, int n, const Poly &B, int m);
+ull tmp[N];
+int gw[N];
 }  // namespace Pol
 
 int n, m;
@@ -51,57 +52,61 @@ int main() {
 }
 
 namespace Pol {
-void DIT(Poly &A, int lim, int len) {
+void DIT(int *A, int lim) {
+  for (int i = 0; i < lim; ++i) tmp[i] = A[i];
   for (int l = 1; l < lim; l <<= 1) {
-    auto k = A.begin();
-    for (; k < A.begin() + lim; k += (l << 1)) {
-      auto x = k;
-      for (int *ig = igw + l; x < k + l; ++x, ++ig) {
-        int o = 1ll * x[l] * *ig % Mod;
-        x[l] = sub(*x, o), inc(*x, o);
+    ull *k = tmp;
+    for (int *g = gw; k < tmp + lim; k += (l << 1), ++g) {
+      for (ull *x = k; x < k + l; ++x) {
+        int o = x[l] % Mod;
+        x[l] = 1ll * (*x + Mod - o) * *g % Mod, *x += o;
       }
     }
   }
-  int iv = pow(lim, Mod - 2, Mod);
-  for (int i = 0; i < len; ++i) A[i] = 1ll * A[i] * iv % Mod;
+  int iv = pow(lim, Mod - 2);
+  for (int i = 0; i < lim; ++i) A[i] = 1ll * tmp[i] % Mod * iv % Mod;
+  std::reverse(A + 1, A + lim);
 }
-void DIF(Poly &A, int lim) {
+void DIF(int *A, int lim) {
+  for (int i = 0; i < lim; ++i) tmp[i] = A[i];
   for (int l = lim / 2; l >= 1; l >>= 1) {
-    auto k = A.begin();
-    for (; k < A.begin() + lim; k += (l << 1)) {
-      auto x = k;
-      for (int *g = gw + l; x < k + l; ++x, ++g) {
-        int o = x[l];
-        x[l] = 1ll * (*x + Mod - o) * *g % Mod;
-        inc(*x, o);
+    ull *k = tmp;
+    for (int *g = gw; k < tmp + lim; k += (l << 1), ++g) {
+      for (ull *x = k; x < k + l; ++x) {
+        int o = 1ll * x[l] * *g % Mod;
+        x[l] = *x + Mod - o, *x += o;
       }
     }
   }
+  for (int i = 0; i < lim; ++i) A[i] = tmp[i] % Mod;
 }
-Poly mult(Poly A, int n, Poly B, int m) {
+Poly mult(const Poly &A, int n, const Poly &B, int m) {
   int lim = 1;
   while (lim < (n + m - 1)) lim <<= 1;
-  A.resize(lim), B.resize(lim);
-  DIF(A, lim), DIF(B, lim);
-  for (int i = 0; i < lim; ++i) A[i] = 1ll * A[i] * B[i] % Mod;
-  DIT(A, lim, lim);
+  static int tA[N], tB[N];
+  std::copy_n(A.begin(), n, tA), std::fill(tA + n, tA + lim, 0);
+  std::copy_n(B.begin(), m, tB), std::fill(tB + m, tB + lim, 0);
+  DIF(tA, lim), DIF(tB, lim);
+  for (int i = 0; i < lim; ++i) tA[i] = 1ll * tA[i] * tB[i] % Mod;
+  DIT(tA, lim);
   Poly ans(n + m - 1);
-  std::copy_n(A.begin(), n + m - 1, ans.begin());
+  std::copy_n(tA, n + m - 1, ans.begin());
   return ans;
 }
 void init_Poly(int n) {
-  int t = std::min(int(log(n) / log(2)), 21);
-  gw[1 << t] = pow(31, 1 << (21 - t));
-  for (int i = 21; i >= 0; --i) {
-  }
+  int t = 1;
+  while ((1 << t) < n) ++t;
+  t = std::min(t - 1, 21);
+  gw[0] = 1, gw[1 << t] = pow(pow(3, 119), 1 << (21 - t));
+  for (int i = t; i; --i) gw[1 << (i - 1)] = 1ll * gw[1 << i] * gw[1 << i] % Mod;
+  for (int i = 1; i < (1 << t); ++i) gw[i] = 1ll * gw[i & (i - 1)] * gw[i & -i] % Mod;
 }
 }  // namespace Pol
 
-int pow(int a, int b, int m) {
-  int ans = 1, now = a;
+int pow(int a, int b, int ans) {
   while (b) {
-    if (b & 1) ans = 1ll * ans * now % m;
-    now = 1ll * now * now % m;
+    if (b & 1) ans = 1ll * ans * a % Mod;
+    a = 1ll * a * a % Mod;
     b >>= 1;
   }
   return ans;
@@ -112,27 +117,20 @@ void read(T &Re) {
   T k = 0;
   char ch = getchar();
   int flag = 1;
-  while (!isNum(ch)) {
+  while (!std::isdigit(ch)) {
     if (ch == '-') flag = -1;
     ch = getchar();
   }
-  while (isNum(ch)) {
-    k = (k << 1) + (k << 3) + ch - '0';
-    ch = getchar();
-  }
+  while (std::isdigit(ch)) k = k * 10 + ch - '0', ch = getchar();
   Re = flag * k;
 }
 template <typename T>
 void write(const T &Wr) {
   if (Wr < 0) {
-    putchar('-');
-    write(-Wr);
+    putchar('-'), write(-Wr);
+  } else if (Wr < 10) {
+    putchar(Wr + '0');
   } else {
-    if (Wr < 10) {
-      putchar(Wr + '0');
-    } else {
-      write(Wr / 10);
-      putchar((Wr % 10) + '0');
-    }
+    write(Wr / 10), putchar((Wr % 10) + '0');
   }
 }
