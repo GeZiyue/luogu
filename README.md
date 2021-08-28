@@ -1,2 +1,3 @@
-# My code's backup
-[My luogu account](https://www.luogu.org/space/show?uid=25251)
+由于种种原因此项目停止维护
+
+如要需要我的代码可以私信[我的洛谷](https://www.luogu.com.cn/user/25251) 或 QQ：2775632269
